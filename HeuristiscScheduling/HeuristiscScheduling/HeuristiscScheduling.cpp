@@ -12,7 +12,7 @@
 #include <ctime>
 #include <stdio.h> 
 
-clock_t start, stop;
+
 //params
 const double workingTime = 20;	//time in secs
 const int iterations = 10;   //number of iterations to run
@@ -23,10 +23,30 @@ int problem[2][problemSize];    //tasks times
 int breakLen = 0;   //break length
 int maxTimeBetweenBreaks = 0; //maximum time between two holes
 //variables
+clock_t start, stop;
 float populationScores[populationSize]; //score of each solution (Cmax)
 vector<vector<vector<int>>> solutions;  //solutions of current iteration
 vector<int>parents; //parents of current solutions
 vector<vector<int>> bestSolution;   //the best that has been found
+
+int countCmax(int id) {
+    int m2len = solutions[id][1].length();
+    int cmax = 0;
+
+    for (int i = 0; i < m2len; i++) {
+        if (solutions[id][1][i] == 30000) {//30 000 break
+            cmax += breakLen;
+        }
+        else if (solutions[id][1][i] >= 0) {//<0,29999> number of taks
+            cmax += problem[1][solutions[id][1][i]];
+        }
+        else {//<-29999,-1>waiting time
+            cmax += -1 * solutions[id][1][i];
+        }
+    }
+
+    return cmax;
+}
 
 int main()
 {
