@@ -20,6 +20,7 @@ bool iterations = true; // set app to run given iterations number if true, if fa
 const int populationSize = 180; 
 const int parentsForGeneration = 10;    //number of parents to be selected fo next generation
 //given problem
+int problemSize = 0;
 int problem[2][problemSize];    //tasks times
 int breakLen = 0;   //break length
 int maxTimeBetweenBreaks = 0; //maximum time between two holes
@@ -85,7 +86,7 @@ void roulette() {
     }
 }
 
-void nextGen() {
+void nextGen() {//taking task order form parents    ///spr numerki od zadań, przerw i wymuszonych przerw
     int parent1 = 0, parent2 = 0;
     int percentageOfParent = 0;
 
@@ -98,7 +99,61 @@ void nextGen() {
             parent2 = rand() % parents.size();
         }
 
-        //here to make nexGen solution from parent
+        for (int k = 0; k < 2; k++) {
+            vector<int>newSolution; //vector for new solution
+            bool alreadyInNew[problemSize];  //write here what you take from praent1, so you know what to take form parent2
+            for (int i = 0; i < problemSize; i++) {
+                alreadyInNew[i] = false;
+            }
+
+            bool isThatAll = false;
+            int numberTasksFromParent = percentageOfParent * problemSize / 100;
+
+            for (int j = 0, m = 0; j < numberTasksFromParent + 1, m < solution[parent1][k].size(); j++, m++) {///spr czy dobre j
+                if (j < numberTasksFromParent) {///spr czy dobre j
+                    if (solution[parent1][k][m] == maintenance || solution[parent1][k][m] < 0) {//if it's not a task make iteration again
+                        j--;
+                    }
+                    else {
+                        newSolution.push_back(solution[parent1][k][m]);
+                        alreadyInNew[solution[parent1][k][m]] = true;
+                    }
+                }
+                else {	//rest of task comes from second parent
+                    for (int i = 0; i < problemSize; i++) {//check if new solution has already all tasks
+                        if (alreadyInNew[i] == 0) {
+                            isThatAll = false;
+                            break;
+                        }
+                        isThatAll = true;
+                    }
+                    while (!isThatAll) {
+                        int first = solution[parent2][k].size();
+                        for (int d = 0, m = 0; d < problemSize, m < solution[parent2][k].size(); d++, m++) {
+                            if (solution[parent2][k][m] == maintenance || solution[parent2][k][m] < 0) {
+                                d--;
+                            }
+                            else {
+                                if (alreadyInNew[solution[parent2][k][m]] == 0) {//writ down 'm' to know which cell of parent2 to take 
+                                    if (first > m)
+                                        first = m;
+                                }
+                            }
+                        }
+                        newSolution.push_back(solution[parent2][k][first]);
+                        alreadyInNew[solution[parent2][k][first]] = true;
+                        for (int i = 0; i < problemSize; i++) {//check if newSolution has all tasks 
+                            if (alreadyInNew[i] == 0) {
+                                isThatAll = false;
+                                break;
+                            }
+                            isThatAll = true;
+                        }
+                    }
+                }
+            }
+            solution[i].push_back(newSolution);
+        }
     }
 }
 
