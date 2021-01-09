@@ -85,6 +85,23 @@ void roulette() {
     }
 }
 
+void nextGen() {
+    int parent1 = 0, parent2 = 0;
+    int percentageOfParent = 0;
+
+    for (int i = 0; i < populationSize; i++) {
+        parent1 = rand() % parents.size();
+        parent2 = rand() % parents.size();
+        percentageOfParent = (rand() % 20) + 40;    //rand form (40,59)
+
+        while (parent1 == parent2) {
+            parent2 = rand() % parents.size();
+        }
+
+        //here to make nexGen solution from parent
+    }
+}
+
 int main()
 {
     std::cout << "Hello World!\n";
