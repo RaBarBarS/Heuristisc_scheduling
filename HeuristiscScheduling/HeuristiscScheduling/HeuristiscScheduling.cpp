@@ -18,6 +18,7 @@ const double workingTime = 20;	//time in secs
 const int iterations = 10;   //number of iterations to run
 bool iterations = true; // set app to run given iterations number if true, if false app run given perioid of time
 const int populationSize = 180; 
+const int parentsForGeneration = 10;    //number of parents to be selected fo next generation
 //given problem
 int problem[2][problemSize];    //tasks times
 int breakLen = 0;   //break length
@@ -46,6 +47,42 @@ int countCmax(int id) {
     }
 
     return cmax;
+}
+
+void roulette() {
+    parents.clear();
+    float sumOfScores = 0;
+    float probabilitySum = 0;
+    float probabilityOfParent[populationSize];
+
+    for (int i = 0; i < populationSize; i++)    {
+        sumOfScores += populationScores[i];
+    }
+
+    for (int i = 0; i < populationSize; i++) {
+        probabilityOfParent[i] = (1 - (populationScores[i] / sum)) / sum;   //as we want the smallest score to have the biggest probability we have to substract from 1...
+        probabilitySum += probabilityOfParent[i];   //probabilitest created like that won't sum to 1, so we have to sum them
+    }
+
+    for (int i = 0; i < parentsForGeneration; i++) {
+        float x = fmod((double)(rand() / 100.0), probabilitySum);   //picking random number from (0,probabilitySum)
+        int j = 0;
+        sum = 0;
+        while (sum < x) {
+            sum += probabilityOfParent[j];
+            j++;
+        }
+        if (j == populationSize)j--;    //just in case
+
+        vector<int>::iterator it;
+        it = find(parents.begin(), parents.end(), j);
+        if (it != parents.end()) {	//check if this one has been already choosen
+            i--;	//if so make more iterations to choose someone else
+        }
+        else {
+            parents.push_back(j);
+        }
+    }
 }
 
 int main()
