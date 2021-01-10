@@ -19,9 +19,10 @@ const int iterationsNumber = 10;   //number of iterations to run
 bool iterations = true; // set app to run given iterations number if true, if false app run given perioid of time
 const int populationSize = 180; 
 const int parentsForGeneration = 10;    //number of parents to be selected fo next generation
+std::string input = "in.txt";
 //given problem
-const int problemSize = 10;///przerób tab poniżej na dynamiczny
-int problem[2][problemSize];    //tasks times
+int problemSize = 10;///przerób tab poniżej na dynamiczny
+std::vector<std::vector<int>> problem;    //tasks times
 int breakLen = 0;   //break length
 int maxTimeBetweenBreaks = 0; //maximum time between two holes
 //variables
@@ -101,9 +102,9 @@ void nextGen() {//taking task order form parents    ///spr numerki od zadań, pr
 
         for (int k = 0; k < 2; k++) {
             std::vector<int>newSolution; //vector for new solution
-            bool alreadyInNew[problemSize];  //write here what you take from praent1, so you know what to take form parent2
+            std::vector<bool> alreadyInNew;  //write here what you take from praent1, so you know what to take form parent2
             for (int i = 0; i < problemSize; i++) {
-                alreadyInNew[i] = false;
+                alreadyInNew.push_back(false);
             }
 
             bool isThatAll = false;
@@ -171,6 +172,54 @@ void addMutations() {
     }
 }
 
+bool readFile() {
+    /// <summary>
+    /// problem_size
+    /// tasks_on_M1
+    /// taska_on_M2
+    /// maintanance_len tau(time_without_maintanace)
+    /// </summary>
+    std::fstream file;
+    file.open(input, std::ios::in); //std::string input = "in.txt";
+    std::string help= "";
+
+    if (file.is_open())
+    {
+        getline(file, help);
+        problemSize = std::stoi(help);
+        for (int i = 0; i < problemSize; i++) {
+            problem[0].push_back(0);
+            problem[1].push_back(0);
+        }
+
+        for (int i = 0; i < problemSize; i++) {
+            getline(file, help);
+            problem[0][i] = std::stoi(help);
+        }
+
+        getline(file, help);
+
+        for (int i = 0; i < problemSize; i++) {
+            getline(file, help);
+            problem[1][i] = std::stoi(help);
+        }
+
+        getline(file, help);
+
+        getline(file, help);
+        breakLen = std::stoi(help);
+
+        getline(file, help);
+        maxTimeBetweenBreaks = std::stoi(help);
+
+        file.close();
+    }
+    else {
+        return false;
+    }
+    return true;
+}
+
 void saveToFile() {
     std::fstream file;
     file.open("lubiePlacki.txt", std::ios::out);
@@ -220,46 +269,50 @@ void saveToFile() {
 
 int main()
 {
-    std::cout << "WELCOME IN SCHEDULING PROGRAM, HOPE THAT OUR HEURISTIC WILL FIND SATYSFAING SOLUTIONS FOR YOU";
+    std::cout << "WELCOME IN SCHEDULING PROGRAM, HOPE THAT OUR HEURISTIC WILL FIND SATYSFAING SOLUTIONS FOR YOU\n";
     bool timeIsOver = false;        //tells if iterations are done or time have gone
-
-    start = clock();
-    if (iterations) {
-        //debugMePlz();
-        for (int i = 0; i < populationSize; i++) {
-            populationScores[i] = countCmax(i);
-        }
-        while (timeIsOver < iterationsNumber) {
-            roulette();
-            nextGen();
-            addMutations();
+    if (readFile()) {
+        start = clock();
+        if (iterations) {
             //debugMePlz();
             for (int i = 0; i < populationSize; i++) {
                 populationScores[i] = countCmax(i);
             }
-            timeIsOver++;
-        }
-        stop = clock();
-    }
-    else {
-        //debugMePlz();
-        for (int i = 0; i < populationSize; i++) {
-            populationScores[i] = countCmax(i);
-        }
-        while (!timeIsOver) {
-            roulette();
-            nextGen();
-            addMutations();
-            //debugMePlz();
-            for (int i = 0; i < populationSize; i++) {
-                populationScores[i] = countCmax(i);
+            while (timeIsOver < iterationsNumber) {
+                roulette();
+                nextGen();
+                addMutations();
+                //debugMePlz();
+                for (int i = 0; i < populationSize; i++) {
+                    populationScores[i] = countCmax(i);
+                }
+                timeIsOver++;
             }
             stop = clock();
-            if (workingTime <= ((double)(stop - start) / CLOCKS_PER_SEC)) timeIsOver = true;
         }
+        else {
+            //debugMePlz();
+            for (int i = 0; i < populationSize; i++) {
+                populationScores[i] = countCmax(i);
+            }
+            while (!timeIsOver) {
+                roulette();
+                nextGen();
+                addMutations();
+                //debugMePlz();
+                for (int i = 0; i < populationSize; i++) {
+                    populationScores[i] = countCmax(i);
+                }
+                stop = clock();
+                if (workingTime <= ((double)(stop - start) / CLOCKS_PER_SEC)) timeIsOver = true;
+            }
+        }
+
+        saveToFile();
     }
-    
-    saveToFile();
+    else {
+        std::cout << "troubles opening the file\n";
+    }
 
     system("Pause");
 }
