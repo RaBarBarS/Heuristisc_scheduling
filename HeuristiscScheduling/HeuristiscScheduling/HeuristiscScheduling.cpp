@@ -157,6 +157,20 @@ void nextGen() {//taking task order form parents    ///spr numerki od zadań, pr
     }
 }
 
+void addMutations() {
+    for (int i = 0; i < populationSize; i++) {
+        for (int j = 0; j < 2; j++) {
+            int mutationNumber = rand() % (problemSize / 5);	//random number of mutations but no more than 20% of solution size
+            for (int h = 0; h < mutationNumber; h++) {
+                int x = rand() % (problemSize - 1);
+                int tmp = solution[i][j][x];
+                solution[i][j][x] = solution[i][j][x + 1];
+                solution[i][j][x + 1] = tmp;
+            }
+        }
+    }
+}
+
 int main()
 {
     std::cout << "Hello World!\n";
