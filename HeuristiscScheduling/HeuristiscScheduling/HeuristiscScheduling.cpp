@@ -171,6 +171,53 @@ void addMutations() {
     }
 }
 
+void saveToFile() {
+    fstream file;
+    file.open("lubiePlacki.txt", ios::out);
+    int theBestSolution = 0;
+    float theBestTime = populationScores[0];	//start with first solution as best score 
+
+    for (int i = 0; i < populationSize; i++) {
+        if (populationScores[i] < theBestTime) {
+            theBestTime = populationScores[i];
+            theBestSolution= i;
+        }
+    }
+    file << "Cmax: " << theBestTime << endl;
+    file << "M1: ";
+    for (int i = 0; i < solution[theBestSolution][0].size(); i++) {
+        if (solution[theBestSolution][0][i] == 30000) {
+            file << "m" << breakLen << " ";
+        }
+        else if (solution[theBestSolution][0][i] > 0) {
+            file << solution[theBestSolution][0][i] << " ";
+        }
+        else {
+            file << "idle" << solution[theBestSolution][0][i] * -1 << " ";
+        }
+    }
+    file << endl;
+    file << "M2: ";
+    for (int i = 0; i < solution[theBestSolution][0].size(); i++) {
+        if (solution[theBestSolution][0][i] == 30000) {
+            file << "m" << breakLen << " ";
+        }
+        else if (solution[theBestSolution][0][i] > 0) {
+            file << solution[theBestSolution][0][i] << " ";
+        }
+        else {
+            file << "idle" << solution[theBestSolution][0][i] * -1 << " ";
+        }
+    }
+    /*file << endl;
+    file << "laczna ilosc przerw na maszynie pierwszej: 0" << endl;
+    file << "laczna ilosc przerw na maszynie drugiej: " << maintenanceCount << ", sumaryczny czas: " << maintenanceTime << endl;
+    file << "laczna ilosc przerw typu idle na maszynie pierwszej: 0" << endl;
+    file << "laczna ilosc przerw typu idle na maszynie pierwszej: " << idleCount << ", sumaryczny czas: " << idleTime << endl;*/
+
+    file.close();
+}
+
 int main()
 {
     std::cout << "Hello World!\n";
