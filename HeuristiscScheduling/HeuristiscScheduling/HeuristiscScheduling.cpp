@@ -19,7 +19,7 @@ const int iterationsNumber = 10;   //number of iterations to run
 bool iterations = true; // set app to run given iterations number if true, if false app run given perioid of time
 const int populationSize = 180; 
 const int parentsForGeneration = 10;    //number of parents to be selected fo next generation
-std::string input = "in.txt";
+std::string input = "test_1_0.txt";
 //given problem
 int problemSize = 10;///przerób tab poniżej na dynamiczny
 std::vector<std::vector<int>> problem;    //tasks times
