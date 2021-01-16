@@ -23,8 +23,10 @@ std::string input = "in.txt";
 //given problem
 int problemSize = 10;///przerób tab poniżej na dynamiczny
 std::vector<std::vector<int>> problem;    //tasks times
-int breakLen = 0;   //break length
-int maxTimeBetweenBreaks = 0; //maximum time between two holes
+int breakLen1 = 0;   //break length
+int maxTimeBetweenBreaks1 = 0; //maximum time between two holes
+int breakLen2 = 0;   //break length
+int maxTimeBetweenBreaks2 = 0; //maximum time between two holes
 //variables
 clock_t start, stop;
 int populationScores[populationSize]; //score of each solution (Cmax)
@@ -38,7 +40,7 @@ int countCmax(int id) {
 
     for (int i = 0; i < m2len; i++) {
         if (solutions[id][1][i] == 30000) {//30 000 break
-            cmax += breakLen;
+            cmax += breakLen2;
         }
         else if (solutions[id][1][i] >= 0) {//<0,29999> number of taks
             cmax += problem[1][solutions[id][1][i]];
@@ -172,11 +174,177 @@ void addMutations() {
     }
 }
 
+void applySchedulingRulesM1() {
+    int mainten = 30000;
+    int timeToBreakM1 = maxTimeBetweenBreaks1;
+    for (int s = 0; s < populationSize; s++) {
+        timeToBreakM1 = maxTimeBetweenBreaks1;
+        for (int i = 0; i < solutions[s][0].size(); i++) {
+            if (timeToBreakM1 - problem[0][solutions[s][0][i]] < 0) {
+                solutions[s][0].insert(solutions[s][0].begin() + i, mainten);
+            }
+            timeToBreakM1 = maxTimeBetweenBreaks1 - problem[0][solutions[s][0][i]];
+        }
+    }
+}
+
+void applySchedulingRulesM2() {
+    int mainten = 30000;//oznaczenie wymuszonej przerwy
+
+    for (int s = 0; s < populationSize; s++) {
+        int time1m = 0, time2m = 0, timeToBreakM2 = maxTimeBetweenBreaks2;
+        std::vector<int> readyTasksForM2;
+        bool isThatAll = false;
+        
+        //if (s == 73)
+            //cout << " ";
+
+        std::vector<int> helper;//przechowuje M2, bo na razie tylko solution dla M1 jest zapisane i później się skopiuje vector do solM2
+        for (int i = 0, j = 0; i < solutions[s][0].size(); i++, j++) {
+            int lastTimeAddedM2 = 0;
+            //dodanie do czasu M1 kolejnej pozycji
+            if (solutions[s][0][i] < 0) {
+                time1m += -1 * solutions[s][0][i];
+                lastTimeAddedM2 = -1 * solutions[s][0][i];
+            }
+            else if (solutions[s][0][i] >= 0 && solutions[s][0][i] < mainten) {
+                time1m += problem[0][solutions[s][0][i]];
+                readyTasksForM2.push_back(solutions[s][0][i]);
+                lastTimeAddedM2 = problem[0][solutions[s][0][i]];
+            }
+            else {
+                time1m += breakLen1;
+                lastTimeAddedM2 = breakLen1;
+            }
+
+            if (i == 0) {
+                if (problem[0][solutions[s][0][0]] >= breakLen2) {//zadanie na M1 jest dłuższe bądź równe breakM2 wyzeruj czas na przerwę:
+                    //dodaj przerwę najpóźniej jak się da, pozostały czas uzupełnij czasem oczekiwania (może byc i,m,m,m,m dlatego \|/ )
+                    if (problem[0][solutions[s][0][0]] > breakLen2) {
+                        helper.push_back((problem[0][solutions[s][0][0]] % breakLen2) * -1);//dodaj idle an początku wielkości reszty z dzielenia przez dł przerwy
+                        time2m += -1 * helper[helper.size() - 1];//dadaj czas idle
+                        timeToBreakM2 -= solutions[s][0][0];
+                        //resztę uzupełnij przerwami
+                        while (problem[0][solutions[s][0][0]] != time2m) {
+                            helper.push_back(mainten);
+                            time2m += breakLen2;
+                            timeToBreakM2 = maxTimeBetweenBreaks2;
+                        }
+                    }
+                }
+                else if(problem[0][solutions[s][0][0]] + problem[1][solutions[s][0][0]] > maxTimeBetweenBreaks2){//jeśli przerwa jest dłuższa niż zad na M1, ale idle+zad na M2
+                    //nie zdążą się wykonać przed przerwą to wstaw przerwę na początek, bo nie ma innego wyjścia
+                    helper.push_back(mainten);
+                    time2m += breakLen2;
+                    timeToBreakM2 = maxTimeBetweenBreaks2;
+                }
+                else {
+                    helper.push_back(problem[0][solutions[s][0][0]] * -1);//wsadź na początek idle
+                    time2m += problem[0][solutions[s][0][0]];//dpdaj czas idle
+                    timeToBreakM2 -= problem[0][solutions[s][0][0]];//odejmin czas idle od czasu do wymaganej konserwacji
+                }
+                //dodaj zadanie na M2
+                helper.push_back(solutions[s][0][0]);
+                time2m += problem[1][solutions[s][0][0]];
+                timeToBreakM2 -= problem[1][solutions[s][0][0]];
+                readyTasksForM2.pop_back();//wiadomo, że jest jedno, więc nei potrzeba używać delet
+            }
+            else if (readyTasksForM2.size()) {///SPR  jeśli da się dodac jakies zadanie do M2, żeby inaczej nei dodać za dużo źle przerw
+                //jeśli sprawdzanie maszyny 1 bardzo wyprzedza sprawdzanie 2 to zrównaj mierwszą odpowiednio
+                
+                if (time1m > time2m) {
+                    int taskNotLongerThan = maxTimeBetweenBreaks2;
+                    int shortestTask = problem[1][readyTasksForM2[0]];//przypisanie wartości pierwszego zadania jako startowej najmniejszej
+                    std::sort(readyTasksForM2.begin(), readyTasksForM2.end());//posortowane rosnąco
+                    for (int t = readyTasksForM2.size() - 1; t >= 0; t++) {
+                        if (problem[1][readyTasksForM2[t]] < timeToBreakM2) {
+                            helper.push_back(readyTasksForM2[t]);
+                            time2m += problem[1][readyTasksForM2[t]];
+                            timeToBreakM2 -= problem[1][readyTasksForM2[t]];
+                            readyTasksForM2.pop_back();//usuń element, bo juz ododany
+                        }
+                        if (readyTasksForM2[0] && timeToBreakM2 < readyTasksForM2[0]) {//jesi coś jeszcze zostało, ale nawet najmniejszy się już nie zmiesci
+                            helper.push_back(mainten);
+                            time2m += breakLen2;
+                            timeToBreakM2 = maxTimeBetweenBreaks2;
+                        }
+                        if (time1m < time2m) {
+                            break;//zrównaliśmy sie już z M1, należy sprawdzić co M1 ma dla nas inaczej możemy źle uszeregować
+                        }
+                    }
+                }
+            }
+            else if(time1m>time2m) {//jeśli nie ma nic do wstawienia ale M1 jest do przodu to wyrównaj za pom idle i maintenance
+                if (time1m - time2m >= breakLen2) {
+                    helper.push_back(((time1m - time2m) % breakLen2) * -1);//dodaj idle an początku wielkości reszty z dzielenia przez dł przerwy
+                    time2m += time1m - time2m;//dadaj czas idle
+                    timeToBreakM2 -= time1m - time2m;
+                    //resztę uzupełnij przerwami jeśli trzeba
+                    if (time1m > time2m) {
+                        while (time1m != time2m) {
+                            helper.push_back(mainten);
+                            time2m += breakLen2;
+                            timeToBreakM2 = maxTimeBetweenBreaks2;
+                        }
+                    }
+                }
+                else {
+                    helper.push_back(time1m - time2m * -1);//wsadź na początek idle
+                    time2m += time1m - time2m;//dpdaj czas idle
+                    timeToBreakM2 -= time1m - time2m;//odejmin czas idle od czasu do wymaganej konserwacji
+                }
+            }
+            //NA 99% NEI POTRZEBNE
+            //if (i == solutions[s][0].size() - 1) {//jeśli to ostatnia iteracja
+            //    for (int h = 0; h < problemSize; h++) {
+            //        if (tab[h] == 0) {
+            //            isThatAll = false;
+            //            break;
+            //        }
+            //        isThatAll = true;
+            //    }
+            //    while (!isThatAll) {
+            //        int first = solutions[s][1].size();
+            //        for (int d = 0, m = 0; d < problemSize && m < solutions[s][0].size(); d++, m++) {	//dwie zmienne żeby pomijać przerwy
+            //            if (solutions[s][0][m] == maintenance) {
+            //                d--;
+            //            }
+            //            else {
+            //                if (tab[solutions[s][0][m]] == 0) {
+            //                    for (int c = 0; c < solutions[s][1].size(); c++) {
+            //                        if (solutions[s][1][c] == solutions[s][0][m]) {
+            //                            if (first > c)
+            //                                first = c;
+            //                            break;//bo tylko jedno wystąpienie w całym rozwiązaniu wiec po co tracić czas
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //        helper.push_back(solutions[s][1][first]);
+            //        tab[solutions[s][1][first]] = true;
+            //        time2m += problem[1][solutions[s][1][first]];
+            //        for (int h = 0; h < problemSize; h++) {
+            //            if (tab[h] == 0) {
+            //                isThatAll = false;
+            //                break;
+            //            }
+            //            isThatAll = true;
+            //        }
+            //    }
+            //}
+        }
+        solutions[s][1].clear();
+        solutions[s].erase(solutions[s].begin() + 1);
+        solutions[s].push_back(helper);
+    }
+}
+
 bool readFile() {
     /// <summary>
     /// problem_size
     /// tasks_on_M1
-    /// taska_on_M2
+    /// tasks_on_M2
     /// maintanance_len tau(time_without_maintanace)
     /// </summary>
     std::fstream file;
@@ -187,6 +355,7 @@ bool readFile() {
     {
         getline(file, help);
         problemSize = std::stoi(help);
+        getline(file, help);//wczytanie pustej
         for (int i = 0; i < problemSize; i++) {
             problem[0].push_back(0);
             problem[1].push_back(0);
@@ -207,10 +376,18 @@ bool readFile() {
         getline(file, help);
 
         getline(file, help);
-        breakLen = std::stoi(help);
+        breakLen1 = std::stoi(help);
 
         getline(file, help);
-        maxTimeBetweenBreaks = std::stoi(help);
+        maxTimeBetweenBreaks1 = std::stoi(help);
+
+        getline(file, help);
+
+        getline(file, help);
+        breakLen2 = std::stoi(help);
+
+        getline(file, help);
+        maxTimeBetweenBreaks2 = std::stoi(help);
 
         file.close();
     }
@@ -236,7 +413,7 @@ void saveToFile() {
     file << "M1: ";
     for (int i = 0; i < solutions[theBestSolution][0].size(); i++) {
         if (solutions[theBestSolution][0][i] == 30000) {
-            file << "m" << breakLen << " ";
+            file << "m" << breakLen1 << " ";
         }
         else if (solutions[theBestSolution][0][i] > 0) {
             file << solutions[theBestSolution][0][i] << " ";
@@ -249,7 +426,7 @@ void saveToFile() {
     file << "M2: ";
     for (int i = 0; i < solutions[theBestSolution][0].size(); i++) {
         if (solutions[theBestSolution][0][i] == 30000) {
-            file << "m" << breakLen << " ";
+            file << "m" << breakLen2 << " ";
         }
         else if (solutions[theBestSolution][0][i] > 0) {
             file << solutions[theBestSolution][0][i] << " ";
@@ -258,11 +435,6 @@ void saveToFile() {
             file << "idle" << solutions[theBestSolution][0][i] * -1 << " ";
         }
     }
-    /*file << endl;
-    file << "laczna ilosc przerw na maszynie pierwszej: 0" << endl;
-    file << "laczna ilosc przerw na maszynie drugiej: " << maintenanceCount << ", sumaryczny czas: " << maintenanceTime << endl;
-    file << "laczna ilosc przerw typu idle na maszynie pierwszej: 0" << endl;
-    file << "laczna ilosc przerw typu idle na maszynie pierwszej: " << idleCount << ", sumaryczny czas: " << idleTime << endl;*/
 
     file.close();
 }
