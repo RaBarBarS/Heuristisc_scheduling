@@ -14,12 +14,12 @@
 
 
 //params
-const double workingTime = 20;	//time in secs
+const double workingTime = 3;	//time in secs
 const int iterationsNumber = 3;   //number of iterations to run
-bool iterations = true; // set app to run given iterations number if true, if false app run given perioid of time
+bool iterations = false; // set app to run given iterations number if true, if false app run given perioid of time
 const int populationSize = 10; 
 const int parentsForGeneration = 5;    //number of parents to be selected fo next generation
-std::string input = "test_4_0.txt";
+std::string input = "test_6_0.txt";
 //given problem
 int problemSize = 10;///przerób tab poniżej na dynamiczny
 std::vector<std::vector<int>> problem;    //tasks times
@@ -52,6 +52,7 @@ void populate() {
 }
 
 int countCmax(int id) {
+    //std::cout << "cmax\n";
     int m2len = solutions[id][1].size();
     int cmax = 0;
 
@@ -67,36 +68,52 @@ int countCmax(int id) {
         }
     }
 
-    std::cout << id << ' ' << cmax << '\n';
+    //std::cout << id << ' ' << cmax << '\n';
 
     return cmax;
 }
 
+void newBest(int id) {
+    //std::cout<<"newBest\n";
+    bestSolution[0].clear();
+    bestSolution[1].clear();
+
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < solutions[id][i].size(); j++) {
+            bestSolution[i].push_back(solutions[id][i][j]);
+        }
+    }
+}
+
 void roulette() {
+    //std::cout << "ruletka\n";
     parents.clear();
-    float sumOfScores = 0;
+    int sumOfScores = 0;
     float probabilitySum = 0;
     float probabilityOfParent[populationSize];
+    srand(time(NULL));
 
     for (int i = 0; i < populationSize; i++)    {
         sumOfScores += populationScores[i];
     }
 
-    for (int i = 0; i < populationSize; i++) {
-        probabilityOfParent[i] = (1 - (populationScores[i] / sumOfScores));   //as we want the smallest score to have the biggest probability we have to substract from 1...
-        probabilitySum += probabilityOfParent[i];   //probabilitest created like that won't sum to 1, so we have to sum them
-    }
+    //for (int i = 0; i < populationSize; i++) {
+    //    probabilityOfParent[i] = (1 - (populationScores[i] / sumOfScores));   //as we want the smallest score to have the biggest probability we have to substract from 1...
+    //    probabilitySum += probabilityOfParent[i];   //probabilitest created like that won't sum to 1, so we have to sum them
+    //}
 
     for (int i = 0; i < parentsForGeneration; i++) {
-        float x = fmod((double)(rand() / 100.0), probabilitySum);   //picking random number from (0,probabilitySum)
+        int x = rand() % sumOfScores;
+        //float x = fmod((double)(rand() / 100.0), probabilitySum);   //picking random number from (0,probabilitySum)
+        //std::cout << x << '\n';
         int j = 0;
         probabilitySum = 0;
         while (probabilitySum < x) {
-            probabilitySum += probabilityOfParent[j];
+            probabilitySum += populationScores[j];
             j++;
         }
         if (j == populationSize)j--;    //just in case
-
+        //std::cout << j << "\n";
         std::vector<int>::iterator it;
         it = find(parents.begin(), parents.end(), j);
         if (it != parents.end()) {	//check if this one has been already choosen
@@ -109,8 +126,11 @@ void roulette() {
 }
 
 void nextGen() {//taking task order form parents    ///spr numerki od zadań, przerw i wymuszonych przerw
+    //std::cout << "nextGen\n";
     int parent1 = 0, parent2 = 0;
     int percentageOfParent = 0;
+
+    srand(time(NULL));
 
     for (int i = 0; i < populationSize; i++) {
         parent1 = rand() % parents.size();
@@ -150,7 +170,7 @@ void nextGen() {//taking task order form parents    ///spr numerki od zadań, pr
                         isThatAll = true;
                     }
                     while (!isThatAll) {
-                        int first = solutions[parent2][k].size();
+                        int first = solutions[parent2][k].size() - 1;
                         for (int d = 0, m = 0; d < problemSize, m < solutions[parent2][k].size(); d++, m++) {
                             if (solutions[parent2][k][m] == 30000 || solutions[parent2][k][m] < 0) {
                                 d--;
@@ -181,6 +201,7 @@ void nextGen() {//taking task order form parents    ///spr numerki od zadań, pr
 }
 
 void addMutations() {
+    //std::cout << "addMutations\n";
     if (problemSize < 5) {
         return; //nie ma sensu na tak małym rozwiązaniu robić mutacji
     }
@@ -198,6 +219,7 @@ void addMutations() {
 }
 
 void applySchedulingRulesM1() {
+    //std::cout << "rulesM1\n";
     int mainten = 30000;
     int timeToBreakM1 = maxTimeBetweenBreaks1;
     std::vector<int>helper;
@@ -220,6 +242,7 @@ void applySchedulingRulesM1() {
 }
 
 void applySchedulingRulesM2() {
+    //std::cout << "rulesM2\n";
     int mainten = 30000;//oznaczenie wymuszonej przerwy
 
     for (int s = 0; s < populationSize; s++) {
@@ -280,7 +303,7 @@ void applySchedulingRulesM2() {
                 helper.push_back(solutions[s][0][0]);
                 time2m += problem[1][solutions[s][0][0]];
                 timeToBreakM2 -= problem[1][solutions[s][0][0]];
-                readyTasksForM2.pop_back();//wiadomo, że jest jedno, więc nei potrzeba używać delet
+                readyTasksForM2.pop_back();//wiadomo, że jest jedno, więc nie potrzeba używać delet
             }
             else if (readyTasksForM2.size()) {///SPR  jeśli da się dodac jakies zadanie do M2, żeby inaczej nei dodać za dużo źle przerw
                 //jeśli sprawdzanie maszyny 1 bardzo wyprzedza sprawdzanie 2 to zrównaj mierwszą odpowiednio
@@ -302,7 +325,7 @@ void applySchedulingRulesM2() {
                             helper.push_back(readyTasksForM2[t]);
                             time2m += problem[1][readyTasksForM2[t]];
                             timeToBreakM2 -= problem[1][readyTasksForM2[t]];
-                            readyTasksForM2.pop_back();//usuń element, bo juz ododany
+                            readyTasksForM2.erase(readyTasksForM2.begin() + t);//usuń element, bo juz ododany///
                         }
                         else if (readyTasksForM2.size() && timeToBreakM2 >= problem[1][readyTasksForM2[0]]){//jeśłi coś zostało, zmieści się do końca przerwy, ale nie zostało
                             //wstawione to znaczy, że nei skończyło się na M1 i trzeba M2 uzupełnić idlami i przerwami
@@ -375,7 +398,7 @@ void applySchedulingRulesM2() {
                             helper.push_back(readyTasksForM2[t]);
                             time2m += problem[1][readyTasksForM2[t]];
                             timeToBreakM2 -= problem[1][readyTasksForM2[t]];
-                            readyTasksForM2.pop_back();//usuń element, bo juz ododany
+                            readyTasksForM2.erase(readyTasksForM2.begin() + t);//usuń element, bo juz ododany
                             if (readyTasksForM2.size()) {
                                 isThatAll = false;  //jeśli coś jeszcze do uzupełnienia to ustawisThatAll na false
                             }
@@ -413,36 +436,42 @@ void applySchedulingRulesM2() {
     }
 }
 
+void printSolution(int i) {
+
+    std::cout << '\n' << "M1: ";
+
+    for (int j = 0; j < solutions[i][0].size(); j++) {
+        if (solutions[i][0][j] == 30000) {
+            std::cout << "m" << breakLen1 << " ";
+        }
+        else if (solutions[i][0][j] >= 0) {
+            std::cout << solutions[i][0][j] << "/" << problem[0][solutions[i][0][j]] << " ";
+        }
+        else {
+            std::cout << "idle" << solutions[i][0][j] * -1 << " ";
+        }
+    }
+
+    std::cout << '\n' << "M2: ";
+
+    for (int j = 0; j < solutions[i][1].size(); j++) {
+        if (solutions[i][1][j] == 30000) {
+            std::cout << "m" << breakLen2 << " ";
+        }
+        else if (solutions[i][1][j] >= 0) {
+            std::cout << solutions[i][1][j] << "/" << problem[1][solutions[i][1][j]] << " ";
+        }
+        else {
+            std::cout << "idle" << solutions[i][1][j] * -1 << " ";
+        }
+    }
+    std::cout << '\n';
+}
+
 void printSolutions() {
     for (int i = 0; i < populationSize; i++) {
         std::cout << "solution: " << i << '\n' << "m1: ";
-
-        for (int j = 0; j < solutions[i][0].size(); j++) {
-            if (solutions[i][0][j] == 30000) {
-                std::cout << "m" << breakLen1 << " ";
-            }
-            else if (solutions[i][0][j] >= 0) {
-                std::cout << solutions[i][0][j] << ": " << problem[0][solutions[i][0][j]]<< " ";
-            }
-            else {
-                std::cout << "idle" << solutions[i][0][j] * -1 << " ";
-            }
-        }
-
-        std::cout << '\n' << "m2: ";
-
-        for (int j = 0; j < solutions[i][1].size(); j++) {
-            if (solutions[i][1][j] == 30000) {
-                std::cout << "m" << breakLen2 << " ";
-            }
-            else if (solutions[i][1][j] >= 0) {
-                std::cout << solutions[i][1][j] << ": " << problem[1][solutions[i][1][j]] << " ";
-            }
-            else {
-                std::cout << "idle" << solutions[i][1][j] * -1 << " ";
-            }
-        }
-        std::cout << '\n';
+        printSolution(i);
     }
 }
 
@@ -551,32 +580,53 @@ int main()
 {
     std::cout << "WELCOME IN SCHEDULING PROGRAM, HOPE THAT OUR HEURISTIC WILL FIND SATYSFAING SOLUTIONS FOR YOU\n";
     bool timeIsOver = false;        //tells if iterations are done or time have gone
+    int iter = 0;
+    int bestIterationScore = 1;
+    int id = 0;
+
+    std::vector<int> helper;
+    bestSolution.push_back(helper);
+    bestSolution.push_back(helper);
+
     if (readFile()) {
         start = clock();
         if (iterations) {
             populate();
             applySchedulingRulesM1();
             applySchedulingRulesM2();
-            printSolutions();
+            //printSolutions();
             for (int i = 0; i < populationSize; i++) {
                 populationScores[i] = countCmax(i);
+                if (i == 0) {
+                    bestIterationScore = populationScores[0];
+                }
+                if (bestIterationScore > populationScores[i]) {
+                    bestIterationScore = populationScores[i];
+                    id = i;
+                }
             }
+            newBest(id);
             /// <summary>
             /// DODAJ WYBIERANIE NAJLEPSZEGO
             /// </summary>
             /// <returns></returns>
-            while (timeIsOver < iterationsNumber) {
+            while (iter < iterationsNumber) {
                 roulette();
                 nextGen();
                 printSolutions();
                 addMutations();
                 applySchedulingRulesM1();
                 applySchedulingRulesM2();
-                printSolutions();
+                //printSolutions();
                 for (int i = 0; i < populationSize; i++) {
                     populationScores[i] = countCmax(i);
+                    if (bestIterationScore > populationScores[i]) {
+                        bestIterationScore = populationScores[i];
+                        id = i;
+                    }
                 }
-                timeIsOver++;
+                newBest(id);
+                iter++;
             }
             stop = clock();
         }
@@ -586,7 +636,15 @@ int main()
             applySchedulingRulesM2();
             for (int i = 0; i < populationSize; i++) {
                 populationScores[i] = countCmax(i);
+                if (i == 0) {
+                    bestIterationScore = populationScores[0];
+                }
+                if (bestIterationScore > populationScores[i]) {
+                    bestIterationScore = populationScores[i];
+                    id = i;
+                }
             }
+            newBest(id);
             while (!timeIsOver) {
                 roulette();
                 nextGen();
@@ -595,12 +653,17 @@ int main()
                 applySchedulingRulesM2();
                 for (int i = 0; i < populationSize; i++) {
                     populationScores[i] = countCmax(i);
+                    if (bestIterationScore > populationScores[i]) {
+                        bestIterationScore = populationScores[i];
+                        id = i;
+                    }
                 }
+                newBest(id);
                 stop = clock();
                 if (workingTime <= ((double)(stop - start) / CLOCKS_PER_SEC)) timeIsOver = true;
             }
         }
-
+        printSolution(id);
         saveToFile();
     }
     else {
